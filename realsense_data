@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+# this makes linux understands this script's language is python
+
+# roslaunch realsense2_camera rs_camera.launch
+
+
+import pyrealsense2 as rs
+import numpy as np
+import cv2
+
+# 파이프라인 초기화
+pipeline = rs.pipeline()
+
+# 파이프라인 설정: RGB와 깊이 스트림을 설정
+config = rs.config()
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)  # RGB 스트림
+config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)   # 깊이 스트림
+
+# 파이프라인 시작
+pipeline.start(config)
+
+# 색상에 맞춰 깊이 이미지를 정렬하기 위한 객체 생성
+align_to = rs.stream.color
+align = rs.align(align_to)
+
+try:
+    while True:
+        # 다음 프레임 세트 기다리기
+        frames = pipeline.wait_for_frames()
+
+        # 깊이 프레임을 색상 프레임에 맞춰 정렬
+        aligned_frames = align.process(frames)
+
+        # 색상과 깊이 프레임 가져오기
+        color_frame = aligned_frames.get_color_frame()
+        depth_frame = aligned_frames.get_depth_frame()
+
+        # 이미지를 numpy 배열로 변환
+        color_image = np.asanyarray(color_frame.get_data())
+        depth_image = np.asanyarray(depth_frame.get_data())
+
+        # 깊이 이미지를 시각적으로 보기 쉽게 정규화
+        depth_colormap = cv2.applyColorMap(
+            cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET
+        )
+
+        # 두 이미지를 가로로 나란히 합침
+        images = np.hstack((color_image, depth_colormap))
+
+        # 이미지 표시
+        cv2.imshow('RealSense - RGB and Depth Stream', images)
+
+        # 'q' 키를 누르면 종료
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+finally:
+    # 파이프라인 중지
+    pipeline.stop()
+    cv2.destroyAllWindows()
+

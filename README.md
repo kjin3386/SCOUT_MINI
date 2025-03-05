@@ -1,4 +1,4 @@
-# this git is for capstone projext 25-1.
+# Capstone project 25-1.
 
 ## environment : Ubuntu OS, ros1 20.04 noetic 
 
